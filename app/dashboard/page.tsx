@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge"
 import { BookOpen, Calendar, GraduationCap, Home, LogOut, Settings, User, FileText, Bell, Clock } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import Link from "next/link"
+
+// Add this interface at the top of the file, before the component
+interface UserType {
+  id: string
+  name: string
+  email: string
+  role: string
+  department?: string
+}
 
 // Mock data
 const courses = [
@@ -84,7 +94,7 @@ const schedule = [
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<UserType | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -138,40 +148,40 @@ export default function DashboardPage() {
         <nav className="flex-1 overflow-auto p-2">
           <div className="space-y-1">
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
                 Dashboard
-              </div>
+              </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/courses">
                 <BookOpen className="mr-2 h-4 w-4" />
                 Courses
-              </div>
+              </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/schedule">
                 <Calendar className="mr-2 h-4 w-4" />
                 Schedule
-              </div>
+              </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/assignments">
                 <FileText className="mr-2 h-4 w-4" />
                 Assignments
-              </div>
+              </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/profile">
                 <User className="mr-2 h-4 w-4" />
                 Profile
-              </div>
+              </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>
-              <div className="flex items-center">
+              <Link href="/settings">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
-              </div>
+              </Link>
             </Button>
           </div>
         </nav>
