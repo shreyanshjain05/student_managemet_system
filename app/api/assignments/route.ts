@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"; 
-import {PrismaClient} from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient();
 
 // get all assignments
-export async function Get(request: NextRequest) {
-  try{
-    const {searchParams} = new URL(request.url);
-    const studentId = searchParams.get('studentId');
-    const courseCode = searchParams.get('courseCode');
-    const status = searchParams.get('status');
-    const whereClause:{
-      student_id?:string,
-      course_code?:string,
-      status?:string
-    } =  {};
+export async function GET(request: NextRequest) {
+  try {
+    // Parse the request body
+    const body = await request.json();
+    
+    // Destructure potential filter parameters
+    const { studentId, courseCode, status } = body;
+
+    // Construct where clause dynamically
+    const whereClause: {
+      student_id?: string,
+      course_code?: string,
+      status?: string
+    } = {};
+
     if (studentId) whereClause.student_id = studentId;
     if (courseCode) whereClause.course_code = courseCode;
     if (status) whereClause.status = status;

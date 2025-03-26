@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Announcement {
+  id      String @id @default(uuid())
+  title   String
+  content String @db.Text
+  date    DateTime
+}
+
+model ScheduleCurrent {
+  id           String  @id @default(uuid())
+  student_id   String
+  day          String
+  course_code  String
+  course_name  String
+  time         String
+  room         String
+  instructor   String
+  student      ProfilePersonal @relation(fields: [student_id], references: [student_id])
+  course       CoursesCurrent  @relation(fields: [course_code], references: [course_code])
+}
+
+model CoursesPast {
+  course_code  String  @id
+  student_id   String
+  course_name  String
+  credits      Float
+  grade        String
+  semester     String
+  student      ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model CoursesCurrent {
+  course_code           String  @id
+  student_id            String
+  course_name           String
+  credits               Float
+  grade                 String
+  attendance_percentage Float
+  instructor            String?
+  description           String  @db.Text
+  student               ProfilePersonal @relation(fields: [student_id], references: [student_id])
+  courseMaterials       CourseMaterials[]
+  schedules             ScheduleCurrent[]
+  assignments           Assignment[]
+}
+
+model CourseMaterials {
+  id          String @id @default(uuid())
+  course_code String
+  name        String
+  type        String
+  course      CoursesCurrent @relation(fields: [course_code], references: [course_code])
+}
+
+model ScheduleEvents {
+  id         String   @id @default(uuid())
+  student_id String
+  title      String
+  date       DateTime
+  time       String
+  location   String
+  student    ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model Assignment {
+  id             String    @id @default(uuid())
+  student_id     String
+  course_code    String
+  course_name    String
+  title          String
+  description    String    @db.Text
+  created_at     DateTime  @default(now())
+  due_date       DateTime
+  status         String
+  progress       Int
+  submitted_date DateTime?
+  grade          String?
+  feedback       String?   @db.Text
+  student        ProfilePersonal @relation(fields: [student_id], references: [student_id])
+  course         CoursesCurrent @relation(fields: [course_code], references: [course_code])
+}
+
+model AssignmentsPast {
+  id          String    @id @default(uuid())
+  student_id  String
+  course_code String
+  title       String
+  due_date    DateTime
+  status      String
+  grade       String
+  student     ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model ProfilePersonal {
+  student_id          String  @id
+  name                String
+  department          String
+  bio                 String  @db.Text
+  phone               String?
+  email               String?
+  address             String
+  city                String
+  state               String
+  zip_code            String
+  scheduleCurrent     ScheduleCurrent[]
+  coursesPast         CoursesPast[]
+  coursesCurrent      CoursesCurrent[]
+  scheduleEvents      ScheduleEvents[]
+  assignments         Assignment[]
+  assignmentsPast     AssignmentsPast[]
+  profileAcademic     ProfileAcademic?
+  userAuth            UserAuth?
+  userSettings        UserSettings?
+  userNotifications   UserNotifications?
+}
+
+model ProfileAcademic {
+  student_id           String   @id
+  program              String
+  academic_status      String
+  enrollment_status    String
+  academic_advisor     String
+  advisor_email        String
+  expected_graduation  DateTime
+  student              ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model UserAuth {
+  student_id           String   @id
+  password_hash        String
+  last_login           DateTime
+  two_factor_enabled   Boolean
+  login_alerts_enabled Boolean
+  student              ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model UserSettings {
+  student_id  String @id
+  theme       String
+  font_size   String
+  language    String
+  student     ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
+
+model UserNotifications {
+  student_id                 String  @id
+  email_notifications        Boolean
+  browser_notifications      Boolean
+  assignment_notifications   Boolean
+  grade_notifications        Boolean
+  announcement_notifications Boolean
+  event_notifications        Boolean
+  student                    ProfilePersonal @relation(fields: [student_id], references: [student_id])
+}
