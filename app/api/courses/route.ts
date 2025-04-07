@@ -12,23 +12,11 @@ export async function GET(request: NextRequest) {
         // Destructure potential filter parameters
         const { 
             studentId, 
-            courseCode, 
-            courseName, 
-            instructor,
-            minCredits,
-            maxCredits,
-            grade
         } = body;
 
         const courses = await prisma.coursesCurrent.findMany({
             where: {
                 ...(studentId && { student_id: studentId }),
-                ...(courseCode && { course_code: courseCode }),
-                ...(courseName && { course_name: { contains: courseName } }),
-                ...(instructor && { instructor: instructor }),
-                ...(minCredits && { credits: { gte: minCredits } }),
-                ...(maxCredits && { credits: { lte: maxCredits } }),
-                ...(grade && { grade: grade })
             },
             include: {
                 student: true,

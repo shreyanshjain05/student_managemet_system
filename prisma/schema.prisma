@@ -13,13 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Announcement {
-  id      String @id @default(uuid())
-  title   String
-  content String @db.Text
-  date    DateTime
-}
-
 model ScheduleCurrent {
   id           String  @id @default(uuid())
   student_id   String
@@ -53,18 +46,11 @@ model CoursesCurrent {
   instructor            String?
   description           String  @db.Text
   student               ProfilePersonal @relation(fields: [student_id], references: [student_id])
-  courseMaterials       CourseMaterials[]
   schedules             ScheduleCurrent[]
   assignments           Assignment[]
 }
 
-model CourseMaterials {
-  id          String @id @default(uuid())
-  course_code String
-  name        String
-  type        String
-  course      CoursesCurrent @relation(fields: [course_code], references: [course_code])
-}
+
 
 model ScheduleEvents {
   id         String   @id @default(uuid())
@@ -124,8 +110,6 @@ model ProfilePersonal {
   assignmentsPast     AssignmentsPast[]
   profileAcademic     ProfileAcademic?
   userAuth            UserAuth?
-  userSettings        UserSettings?
-  userNotifications   UserNotifications?
 }
 
 model ProfileAcademic {
@@ -148,21 +132,4 @@ model UserAuth {
   student              ProfilePersonal @relation(fields: [student_id], references: [student_id])
 }
 
-model UserSettings {
-  student_id  String @id
-  theme       String
-  font_size   String
-  language    String
-  student     ProfilePersonal @relation(fields: [student_id], references: [student_id])
-}
 
-model UserNotifications {
-  student_id                 String  @id
-  email_notifications        Boolean
-  browser_notifications      Boolean
-  assignment_notifications   Boolean
-  grade_notifications        Boolean
-  announcement_notifications Boolean
-  event_notifications        Boolean
-  student                    ProfilePersonal @relation(fields: [student_id], references: [student_id])
-}
