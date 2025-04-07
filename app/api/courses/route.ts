@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
             },
             include: {
                 student: true,
-                courseMaterials: true,
                 schedules: true,
                 assignments: true
             },
