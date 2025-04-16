@@ -428,13 +428,13 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                           <h3 className="font-semibold">Emergency Contact</h3>
                           <div className="mt-1">
                             <p>Jane Doe (Parent)</p>
                             <p>+1 (555) 987-6543</p>
-                          </div>
-                        </div>
+                          </div> */}
+                        {/* </div> */}
                       </CardContent>
                     </Card>
                   </TabsContent>

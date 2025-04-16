@@ -88,20 +88,20 @@ model ScheduleEvents {
 }
 
 model Assignment {
-  id             String          @id @default(uuid())
+  id             String   @id @default(uuid())
   student_id     String
   course_code    String
   course_name    String
   title          String
   description    String
-  created_at     DateTime        @default(now())
+  created_at     DateTime @default(now())
   due_date       DateTime
-  status         String
+  status         String   // e.g., 'ongoing', 'completed'
   progress       Int
   submitted_date DateTime?
   grade          String?
   feedback       String?
-  course         CoursesCurrent  @relation(fields: [course_code], references: [course_code])
+  course         CoursesCurrent @relation(fields: [course_code], references: [course_code])
   student        ProfilePersonal @relation(fields: [student_id], references: [student_id])
 }
 
