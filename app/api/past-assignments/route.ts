@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
     }
-    
+
     const pastAssignments = await prisma.assignmentsPast.findMany({
       where: {
         student_id: studentId

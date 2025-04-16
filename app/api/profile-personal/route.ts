@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
     }
-    
     const profile = await prisma.profilePersonal.findUnique({
       where: {
         student_id: studentId
