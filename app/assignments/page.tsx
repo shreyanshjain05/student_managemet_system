@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -14,79 +14,112 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 
-// Mock data
-const assignments = [
-  { 
-    id: 1, 
-    course: "CS101", 
-    courseName: "Introduction to Computer Science",
-    title: "Programming Assignment 3", 
-    description: "Implement a binary search tree with insertion, deletion, and traversal operations.",
-    dueDate: "2023-10-20", 
-    status: "pending",
-    progress: 25
-  },
-  { 
-    id: 2, 
-    course: "MATH201", 
-    courseName: "Advanced Calculus",
-    title: "Problem Set 5", 
-    description: "Solve problems related to multivariable calculus and vector fields.",
-    dueDate: "2023-10-18", 
-    status: "submitted",
-    submittedDate: "2023-10-17"
-  },
-  { 
-    id: 3, 
-    course: "ENG102", 
-    courseName: "English Composition",
-    title: "Research Paper Draft", 
-    description: "Submit a draft of your research paper on the assigned topic.",
-    dueDate: "2023-10-25", 
-    status: "pending",
-    progress: 60
-  },
-  { 
-    id: 4, 
-    course: "PHYS101", 
-    courseName: "Physics I",
-    title: "Lab Report 2", 
-    description: "Write a report on the pendulum experiment conducted in lab.",
-    dueDate: "2023-10-15", 
-    status: "graded", 
-    grade: "92/100",
-    feedback: "Excellent analysis of the data. Your conclusions are well-supported by your observations."
-  },
-  { 
-    id: 5, 
-    course: "HIST105", 
-    courseName: "World History",
-    title: "Essay on Industrial Revolution", 
-    description: "Write a 1500-word essay on the social impacts of the Industrial Revolution.",
-    dueDate: "2023-10-30", 
-    status: "pending",
-    progress: 10
-  }
-]
-
-const pastAssignments = [
-  { id: 101, course: "CS101", title: "Programming Assignment 1", dueDate: "2023-09-15", status: "graded", grade: "95/100" },
-  { id: 102, course: "CS101", title: "Programming Assignment 2", dueDate: "2023-09-30", status: "graded", grade: "88/100" },
-  { id: 103, course: "MATH201", title: "Problem Set 1", dueDate: "2023-09-10", status: "graded", grade: "90/100" },
-  { id: 104, course: "MATH201", title: "Problem Set 2", dueDate: "2023-09-17", status: "graded", grade: "85/100" },
-  { id: 105, course: "MATH201", title: "Problem Set 3", dueDate: "2023-09-24", status: "graded", grade: "92/100" },
-  { id: 106, course: "MATH201", title: "Problem Set 4", dueDate: "2023-10-01", status: "graded", grade: "88/100" },
-  { id: 107, course: "ENG102", title: "Essay 1", dueDate: "2023-09-20", status: "graded", grade: "A-" },
-  { id: 108, course: "PHYS101", title: "Lab Report 1", dueDate: "2023-09-25", status: "graded", grade: "85/100" },
-]
-
 export default function AssignmentsPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [assignments, setAssignments] = useState<any[]>([])
+  const [pastAssignments, setPastAssignments] = useState<any[]>([])
   const [selectedAssignment, setSelectedAssignment] = useState<number | null>(null)
   const [filterCourse, setFilterCourse] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [fetchingData, setFetchingData] = useState(true)
+
+  const fetchAssignments = useCallback(async (studentId: string) => {
+    try {
+      console.log(`Fetching ongoing assignments for student: ${studentId}`);
+      
+      // Use absolute URL to ensure correct routing in App Router
+      const apiUrl = `/api/assignments-ongoing?studentId=${studentId}`;
+      console.log('Fetching from:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        cache: 'no-store', // Prevents caching
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response: ${errorText}`);
+        throw new Error(`Error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Received data:', data);
+      
+      // Format the data to match our component's expectations
+      const formattedData = data.map((item: any) => ({
+        id: item.id,
+        course: item.course_code,
+        courseName: item.course_name,
+        title: item.title,
+        description: item.description,
+        dueDate: formatDate(item.due_date),
+        status: item.status.toLowerCase(),
+        progress: item.status.toLowerCase() === "pending" ? calculateProgress(item.due_date) : 0
+      }));
+      
+      console.log('Formatted data:', formattedData);
+      setAssignments(formattedData);
+    } catch (error) {
+      console.error("Failed to fetch ongoing assignments:", error);
+      setAssignments([]);
+    } finally {
+      setFetchingData(false);
+    }
+  }, []);
+  
+  const fetchPastAssignments = useCallback(async (studentId: string) => {
+    try {
+      console.log(`Fetching past assignments for student: ${studentId}`);
+      
+      // Use absolute URL to ensure correct routing in App Router
+      const apiUrl = `/api/assignments-past?studentId=${studentId}`;
+      console.log('Fetching from:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        cache: 'no-store', // Prevents caching
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response: ${errorText}`);
+        throw new Error(`Error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Received data:', data);
+      
+      // Format the data to match our component's expectations
+      const formattedData = data.map((item: any) => ({
+        id: item.id,
+        course: item.course_code,
+        title: item.title,
+        dueDate: formatDate(item.due_date),
+        status: "graded",
+        grade: item.grade
+      }));
+      
+      console.log('Formatted data:', formattedData);
+      setPastAssignments(formattedData);
+    } catch (error) {
+      console.error("Failed to fetch past assignments:", error);
+      setPastAssignments([]);
+    } finally {
+      setFetchingData(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check if user is logged in
@@ -96,9 +129,31 @@ export default function AssignmentsPage() {
       return
     }
     
-    setUser(JSON.parse(userData))
+    const parsedUser = JSON.parse(userData)
+    setUser(parsedUser)
     setLoading(false)
-  }, [router])
+    
+    // Fetch current assignments
+    fetchAssignments(parsedUser.id)
+    
+    // Fetch past assignments
+    fetchPastAssignments(parsedUser.id)
+  }, [router, fetchAssignments, fetchPastAssignments])
+  
+  // Format date from ISO string to YYYY-MM-DD
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  }
+  
+  // Calculate progress based on due date (just a simple implementation)
+  const calculateProgress = (dueDate: string) => {
+    const now = new Date()
+    const due = new Date(dueDate)
+    const totalDays = 14 // Assuming assignments are typically given 2 weeks before due
+    const daysLeft = Math.max(0, Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    return Math.min(100, Math.max(0, Math.round((totalDays - daysLeft) / totalDays * 100)))
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -224,11 +279,9 @@ export default function AssignmentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  <SelectItem value="CS101">CS101</SelectItem>
-                  <SelectItem value="MATH201">MATH201</SelectItem>
-                  <SelectItem value="ENG102">ENG102</SelectItem>
-                  <SelectItem value="PHYS101">PHYS101</SelectItem>
-                  <SelectItem value="HIST105">HIST105</SelectItem>
+                  {Array.from(new Set(assignments.map(a => a.course))).map(course => (
+                    <SelectItem key={course} value={course as string}>{course}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
@@ -253,7 +306,11 @@ export default function AssignmentsPage() {
             </TabsList>
             
             <TabsContent value="current" className="mt-4">
-              {selectedAssignment ? (
+              {fetchingData ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="text-center">Loading assignments...</div>
+                </div>
+              ) : selectedAssignment ? (
                 <div className="space-y-6">
                   <Button variant="outline" onClick={() => setSelectedAssignment(null)}>
                     Back to All Assignments
@@ -405,24 +462,40 @@ export default function AssignmentsPage() {
                   <CardDescription>Assignments you have completed in previous weeks</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {pastAssignments.map((assignment) => (
-                      <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
-                        <div>
-                          <div className="font-medium">{assignment.title}</div>
-                          <div className="text-sm text-muted-foreground">Course: {assignment.course}</div>
-                          <div className="mt-1 flex items-center text-sm">
-                            <Clock className="mr-1 h-4 w-4 text-muted-foreground" />
-                            Due: {assignment.dueDate}
+                  {fetchingData ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="text-center">Loading past assignments...</div>
+                    </div>
+                  ) : pastAssignments.length > 0 ? (
+                    <div className="space-y-4">
+                      {pastAssignments.map((assignment) => (
+                        <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                          <div>
+                            <div className="font-medium">{assignment.title}</div>
+                            <div className="text-sm text-muted-foreground">Course: {assignment.course}</div>
+                            <div className="mt-1 flex items-center text-sm">
+                              <Clock className="mr-1 h-4 w-4 text-muted-foreground" />
+                              Due: {assignment.dueDate}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge className="bg-green-500">Graded</Badge>
+                            <div className="mt-1 text-sm font-medium">{assignment.grade}</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge className="bg-green-500">Graded</Badge>
-                          <div className="mt-1 text-sm font-medium">{assignment.grade}</div>
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <FileText className="h-6 w-6 text-muted-foreground" />
                       </div>
-                    ))}
-                  </div>
+                      <h3 className="mt-4 text-lg font-semibold">No past assignments found</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        You don`t have any completed assignments yet.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
