@@ -28,7 +28,7 @@ interface CurrentCourse {
   credits: number
   grade: string
   attendance_percentage: number
-  instructor?: string // This might need to be added to your API
+  instructor: string // This might need to be added to your API
   description?: string // This might need to be added to your API
   materials?: { name: string, type: string }[] // This might need to be added to your API
 }
@@ -41,27 +41,17 @@ interface PastCourse {
   semester: string
 }
 
-// Mock data for course details that might not be in the API
 const courseDetails = {
-  "CS101": {
-    instructor: "Dr. Alan Turing",
-    description: "An introduction to the fundamental concepts of computer science including algorithms, data structures, and problem-solving techniques.",
+  // Add your course details here
+  'CS101': {
+    instructor: 'Dr. Smith',
+    description: 'Introduction to Computer Science',
     materials: [
-      { name: "Lecture Notes Week 1-5", type: "PDF" },
-      { name: "Programming Assignment Guidelines", type: "DOC" },
-      { name: "Textbook: Introduction to Algorithms", type: "Book" },
-    ],
-  },
-  "MATH201": {
-    instructor: "Dr. Katherine Johnson",
-    description: "A comprehensive study of differential and integral calculus, including applications in physics and engineering.",
-    materials: [
-      { name: "Calculus Formula Sheet", type: "PDF" },
-      { name: "Problem Sets 1-3", type: "PDF" },
-      { name: "Textbook: Advanced Calculus", type: "Book" },
-    ],
-  },
-  // Add more course details as needed
+      { name: 'Lecture Notes 1', type: 'PDF' },
+      { name: 'Assignment 1', type: 'DOC' }
+    ]
+  }
+  // Add more courses as needed
 }
 
 export default function CoursesPage() {
@@ -102,8 +92,8 @@ export default function CoursesPage() {
       // Merge API data with additional details from our mock data
       const enhancedData = data.map((course: CurrentCourse) => {
         const details = courseDetails[course.course_code as keyof typeof courseDetails] || {
-          instructor: "Unknown",
-          description: "No description available",
+          instructor: course.instructor,
+          // description: "No description available",
           materials: [],
         }
         return { ...course, ...details }
@@ -344,7 +334,6 @@ export default function CoursesPage() {
                         <CardHeader>
                           <div className="flex items-center justify-between">
                             <CardTitle>{course.course_code}</CardTitle>
-                            <Badge>{course.grade}</Badge>
                           </div>
                           <CardDescription>{course.course_name}</CardDescription>
                         </CardHeader>
@@ -360,7 +349,7 @@ export default function CoursesPage() {
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span>Instructor</span>
-                              <span className="font-medium">{course.instructor || "Unknown"}</span>
+                              <span className="font-medium">{course.instructor}</span> 
                             </div>
                           </div>
                         </CardContent>

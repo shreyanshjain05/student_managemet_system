@@ -29,9 +29,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Add this interface at the top of the file, before the component
+
+// Add interfaces for the API responses
+interface PersonalProfile {
+  student_id: string
+  name: string
+  email: string
+  phone: string
+  address: string
+  department: string
+  bio: string
+}
+
+interface AcademicProfile {
+  program: string
+  academic_status: string
+  enrollment_status: string
+  academic_advisor: string
+  advisor_email: string
+  expected_graduation: string
+}
+
 interface User {
   id: string
   name: string
@@ -42,8 +61,9 @@ interface User {
 
 export default function ProfilePage() {
   const router = useRouter()
-  // Then replace all instances of `useState<any>(null)` with:
   const [user, setUser] = useState<User | null>(null)
+  const [personalProfile, setPersonalProfile] = useState<PersonalProfile | null>(null)
+  const [academicProfile, setAcademicProfile] = useState<AcademicProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
@@ -52,9 +72,7 @@ export default function ProfilePage() {
     email: "",
     phone: "",
     address: "",
-    city: "",
-    state: "",
-    zipCode: "",
+    department: "",
     bio: "",
   })
 
@@ -69,22 +87,60 @@ export default function ProfilePage() {
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
 
-    // Initialize form data with user info
-    const nameParts = parsedUser.name.split(" ")
-    setFormData({
-      firstName: nameParts[0] || "",
-      lastName: nameParts.slice(1).join(" ") || "",
-      email: parsedUser.email || "",
-      phone: "+1 (555) 123-4567", // Mock data
-      address: "123 University Ave", // Mock data
-      city: "College Town", // Mock data
-      state: "CA", // Mock data
-      zipCode: "12345", // Mock data
-      bio: "Computer Science student with interests in artificial intelligence and web development.", // Mock data
-    })
-
-    setLoading(false)
+    // Fetch personal profile data
+    fetchPersonalProfile(parsedUser.id)
+    
+    // Fetch academic profile data
+    fetchAcademicProfile(parsedUser.id)
   }, [router])
+
+  const fetchPersonalProfile = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/profile-personal?studentId=${studentId}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch personal profile')
+      }
+      
+      const data = await response.json()
+      setPersonalProfile(data)
+      
+      // Initialize form data with personal profile info
+      if (data) {
+        const nameParts = data.name.split(" ")
+        setFormData({
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          department: data.department || "",
+          bio: data.bio || "",
+        })
+      }
+      
+    } catch (error) {
+      console.error("Error fetching personal profile:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchAcademicProfile = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/profile-academic?studentId=${studentId}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch academic profile')
+      }
+      
+      const data = await response.json()
+      setAcademicProfile(data)
+      
+    } catch (error) {
+      console.error("Error fetching academic profile:", error)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -98,28 +154,44 @@ export default function ProfilePage() {
     })
   }
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    })
-  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // In a real application, you would update the profile in the database
+    // For now, we'll just update the local state to simulate the API call
+    
+    try {
 
-    // Update user data in localStorage
-    const updatedUser = {
-      ...user,
-      id: user?.id || "", // Ensure id is always defined
-      name: `${formData.firstName} ${formData.lastName}`,
-      email: formData.email,
-      role: user?.role || "Student", // Ensure role is always defined
+      const updatedPersonalProfile = {
+        student_id: user?.id || "",
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        department: formData.department,
+        bio: formData.bio,
+      }
+      
+      setPersonalProfile(updatedPersonalProfile)
+      
+      // Update user in localStorage for consistency
+      if (user) {
+        const updatedUser = {
+          ...user,
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          department: formData.department,
+        }
+        
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setUser(updatedUser)
+      }
+      
+      setIsEditing(false)
+    } catch (error) {
+      console.error("Error updating profile:", error)
     }
-
-    localStorage.setItem("user", JSON.stringify(updatedUser))
-    setUser(updatedUser)
-    setIsEditing(false)
   }
 
   if (loading) {
@@ -246,35 +318,35 @@ export default function ProfilePage() {
                 <CardHeader>
                   <div className="flex flex-col items-center">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src="/placeholder.svg" alt={user?.name} />
+                      <AvatarImage src="/placeholder.svg" alt={personalProfile?.name} />
                       <AvatarFallback>
-                        {user?.name
+                        {personalProfile?.name
                           ?.split(" ")
                           .map((n: string) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <CardTitle className="mt-4">{user?.name}</CardTitle>
-                    <CardDescription>Student ID: {user?.id}</CardDescription>
+                    <CardTitle className="mt-4">{personalProfile?.name}</CardTitle>
+                    <CardDescription>Student ID: {personalProfile?.student_id}</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center">
                       <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{user?.email}</span>
+                      <span>{personalProfile?.email}</span>
                     </div>
                     <div className="flex items-center">
                       <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>+1 (555) 123-4567</span>
+                      <span>{personalProfile?.phone}</span>
                     </div>
                     <div className="flex items-center">
                       <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>123 University Ave, College Town, CA 12345</span>
+                      <span>{personalProfile?.address}</span>
                     </div>
                     <div className="flex items-center">
                       <Building className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>Department: {user?.department || "Computer Science"}</span>
+                      <span>Department: {personalProfile?.department}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -341,36 +413,9 @@ export default function ProfilePage() {
                         <Input id="address" name="address" value={formData.address} onChange={handleChange} required />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City</Label>
-                          <Input id="city" name="city" value={formData.city} onChange={handleChange} required />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State</Label>
-                          <Select value={formData.state} onValueChange={(value) => handleSelectChange("state", value)}>
-                            <SelectTrigger id="state">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CA">California</SelectItem>
-                              <SelectItem value="NY">New York</SelectItem>
-                              <SelectItem value="TX">Texas</SelectItem>
-                              <SelectItem value="FL">Florida</SelectItem>
-                              <SelectItem value="IL">Illinois</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="zipCode">Zip Code</Label>
-                          <Input
-                            id="zipCode"
-                            name="zipCode"
-                            value={formData.zipCode}
-                            onChange={handleChange}
-                            required
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Input id="department" name="department" value={formData.department} onChange={handleChange} required />
                       </div>
 
                       <div className="space-y-2">
@@ -402,7 +447,7 @@ export default function ProfilePage() {
                         <div>
                           <h3 className="font-semibold">Bio</h3>
                           <p className="mt-1 text-muted-foreground">
-                            Computer Science student with interests in artificial intelligence and web development.
+                            {personalProfile?.bio || "No bio available."}
                           </p>
                         </div>
 
@@ -411,11 +456,11 @@ export default function ProfilePage() {
                           <div className="mt-1 space-y-2">
                             <div className="flex items-center">
                               <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                              <span>{user?.email}</span>
+                              <span>{personalProfile?.email}</span>
                             </div>
                             <div className="flex items-center">
                               <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                              <span>+1 (555) 123-4567</span>
+                              <span>{personalProfile?.phone}</span>
                             </div>
                           </div>
                         </div>
@@ -423,18 +468,9 @@ export default function ProfilePage() {
                         <div>
                           <h3 className="font-semibold">Address</h3>
                           <div className="mt-1">
-                            <p>123 University Ave</p>
-                            <p>College Town, CA 12345</p>
+                            <p>{personalProfile?.address}</p>
                           </div>
                         </div>
-
-                        {/* <div>
-                          <h3 className="font-semibold">Emergency Contact</h3>
-                          <div className="mt-1">
-                            <p>Jane Doe (Parent)</p>
-                            <p>+1 (555) 987-6543</p>
-                          </div> */}
-                        {/* </div> */}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -447,28 +483,30 @@ export default function ProfilePage() {
                       <CardContent className="space-y-4">
                         <div>
                           <h3 className="font-semibold">Program</h3>
-                          <p className="mt-1">Bachelor of Science in Computer Science</p>
+                          <p className="mt-1">{academicProfile?.program || "Not available"}</p>
                         </div>
 
                         <div>
                           <h3 className="font-semibold">Academic Status</h3>
-                          <Badge className="mt-1">Good Standing</Badge>
+                          <Badge className="mt-1">{academicProfile?.academic_status || "Not available"}</Badge>
                         </div>
 
                         <div>
                           <h3 className="font-semibold">Enrollment Status</h3>
-                          <p className="mt-1">Full-time</p>
+                          <p className="mt-1">{academicProfile?.enrollment_status || "Not available"}</p>
                         </div>
 
                         <div>
                           <h3 className="font-semibold">Academic Advisor</h3>
-                          <p className="mt-1">Dr. Robert Smith</p>
-                          <p className="text-sm text-muted-foreground">Email: rsmith@university.edu</p>
+                          <p className="mt-1">{academicProfile?.academic_advisor || "Not available"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Email: {academicProfile?.advisor_email || "Not available"}
+                          </p>
                         </div>
 
                         <div>
                           <h3 className="font-semibold">Expected Graduation</h3>
-                          <p className="mt-1">May 2025</p>
+                          <p className="mt-1">{academicProfile?.expected_graduation || "Not available"}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -482,4 +520,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-

@@ -24,7 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Add this interface at the top of the file, before the component
+// User interface
 interface User {
   id: string
   name: string
@@ -33,124 +33,51 @@ interface User {
   department?: string
 }
 
-// Mock data
-const schedule = [
-  {
-    day: "Monday",
-    classes: [
-      {
-        course: "CS101",
-        name: "Introduction to Computer Science",
-        time: "09:00 - 10:30",
-        room: "Tech Building 305",
-        instructor: "Dr. Alan Turing",
-      },
-      {
-        course: "MATH201",
-        name: "Advanced Calculus",
-        time: "13:00 - 14:30",
-        room: "Science Hall 210",
-        instructor: "Dr. Katherine Johnson",
-      },
-    ],
-  },
-  {
-    day: "Tuesday",
-    classes: [
-      {
-        course: "ENG102",
-        name: "English Composition",
-        time: "11:00 - 12:30",
-        room: "Humanities 110",
-        instructor: "Prof. Jane Austen",
-      },
-    ],
-  },
-  {
-    day: "Wednesday",
-    classes: [
-      {
-        course: "CS101",
-        name: "Introduction to Computer Science",
-        time: "09:00 - 10:30",
-        room: "Tech Building 305",
-        instructor: "Dr. Alan Turing",
-      },
-      {
-        course: "PHYS101",
-        name: "Physics I",
-        time: "15:00 - 17:00",
-        room: "Science Hall 150",
-        instructor: "Dr. Richard Feynman",
-      },
-    ],
-  },
-  {
-    day: "Thursday",
-    classes: [
-      {
-        course: "ENG102",
-        name: "English Composition",
-        time: "11:00 - 12:30",
-        room: "Humanities 110",
-        instructor: "Prof. Jane Austen",
-      },
-      {
-        course: "HIST105",
-        name: "World History",
-        time: "14:00 - 15:30",
-        room: "Humanities 220",
-        instructor: "Prof. Howard Zinn",
-      },
-    ],
-  },
-  {
-    day: "Friday",
-    classes: [
-      {
-        course: "MATH201",
-        name: "Advanced Calculus",
-        time: "13:00 - 14:30",
-        room: "Science Hall 210",
-        instructor: "Dr. Katherine Johnson",
-      },
-      {
-        course: "PHYS101",
-        name: "Physics I",
-        time: "15:00 - 16:00",
-        room: "Science Hall 150",
-        instructor: "Dr. Richard Feynman",
-      },
-    ],
-  },
-]
+// Define interfaces for API responses
+interface ClassSchedule {
+  day: string
+  course_code: string
+  course_name: string
+  instructor: string
+  room: string
+  time: string
+}
 
-const events = [
-  { id: 1, title: "Midterm Exam - CS101", date: "2023-10-25", time: "10:00 - 12:00", location: "Exam Hall 1" },
-  { id: 2, title: "Guest Lecture: AI Ethics", date: "2023-10-27", time: "14:00 - 16:00", location: "Auditorium" },
-  {
-    id: 3,
-    title: "Study Group - MATH201",
-    date: "2023-10-28",
-    time: "15:00 - 17:00",
-    location: "Library Study Room 3",
-  },
-  { id: 4, title: "Career Fair", date: "2023-11-05", time: "10:00 - 15:00", location: "Student Center" },
-  {
-    id: 5,
-    title: "Final Project Presentation",
-    date: "2023-11-15",
-    time: "13:00 - 15:00",
-    location: "Tech Building 305",
-  },
-]
+interface EventSchedule {
+  title: string
+  date: string
+  time: string
+  location: string
+}
+
+// Define the class object type to fix TypeScript error
+interface ClassItem {
+  course: string
+  name: string
+  time: string
+  room: string
+  instructor: string
+}
+
+// Group classes by day for display
+interface ScheduleByDay {
+  day: string
+  classes: ClassItem[]  // Now properly typed as an array of ClassItem
+}
 
 export default function SchedulePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [scheduleLoading, setScheduleLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [currentWeek] = useState("Oct 23 - Oct 29, 2023")
   const [viewType, setViewType] = useState("week")
+  
+  // State for API data
+  const [scheduleData, setScheduleData] = useState<ScheduleByDay[]>([])
+  const [eventsData, setEventsData] = useState<EventSchedule[]>([])
 
   useEffect(() => {
     // Check if user is logged in
@@ -160,9 +87,82 @@ export default function SchedulePage() {
       return
     }
 
-    setUser(JSON.parse(userData))
+    const user = JSON.parse(userData)
+    setUser(user)
     setLoading(false)
+
+    // Fetch schedule data
+    fetchScheduleData(user.id)
+    fetchEventsData(user.id)
   }, [router])
+
+  const fetchScheduleData = async (studentId: string) => {
+    try {
+      setScheduleLoading(true)
+      const response = await fetch(`/api/schedule-current?studentId=${studentId}`)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch schedule: ${response.status}`)
+      }
+      
+      const data: ClassSchedule[] = await response.json()
+      
+      // Process and group the data by day
+      const groupedByDay = groupScheduleByDay(data)
+      setScheduleData(groupedByDay)
+    } catch (err) {
+      console.error("Error fetching schedule:", err)
+      setError("Failed to load schedule data")
+    } finally {
+      setScheduleLoading(false)
+    }
+  }
+
+  const fetchEventsData = async (studentId: string) => {
+    try {
+      setEventsLoading(true)
+      const response = await fetch(`/api/schedule-future?studentId=${studentId}`)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.status}`)
+      }
+      
+      const data: EventSchedule[] = await response.json()
+      setEventsData(data)
+    } catch (err) {
+      console.error("Error fetching events:", err)
+      setError("Failed to load events data")
+    } finally {
+      setEventsLoading(false)
+    }
+  }
+
+  // Helper function to group schedule by day
+  const groupScheduleByDay = (classes: ClassSchedule[]): ScheduleByDay[] => {
+    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    
+    // Initialize the days array with properly typed empty classes arrays
+    const groupedSchedule: ScheduleByDay[] = daysOfWeek.map(day => ({
+      day,
+      classes: [] as ClassItem[]  // Explicitly type as ClassItem[]
+    }));
+    
+    // Group classes by day
+    classes.forEach(cls => {
+      const dayIndex = daysOfWeek.indexOf(cls.day);
+      if (dayIndex !== -1) {
+        groupedSchedule[dayIndex].classes.push({
+          course: cls.course_code,
+          name: cls.course_name,
+          time: cls.time,
+          room: cls.room,
+          instructor: cls.instructor
+        });
+      }
+    });
+    
+    return groupedSchedule;
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -304,6 +304,12 @@ export default function SchedulePage() {
             </div>
           </div>
 
+          {error && (
+            <div className="mb-4 rounded-md bg-red-50 p-4 text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="grid gap-6 md:grid-cols-3">
             <div className="md:col-span-2">
               <Card>
@@ -312,33 +318,39 @@ export default function SchedulePage() {
                   <CardDescription>Your class schedule for this week</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    {schedule.map((day) => (
-                      <div key={day.day} className="space-y-3">
-                        <h3 className="font-semibold">{day.day}</h3>
-                        {day.classes.length > 0 ? (
-                          <div className="space-y-2">
-                            {day.classes.map((cls, index) => (
-                              <div key={index} className="rounded-lg border p-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="font-medium">
-                                    {cls.course}: {cls.name}
+                  {scheduleLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="text-center">Loading schedule...</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {scheduleData.map((day) => (
+                        <div key={day.day} className="space-y-3">
+                          <h3 className="font-semibold">{day.day}</h3>
+                          {day.classes.length > 0 ? (
+                            <div className="space-y-2">
+                              {day.classes.map((cls, index) => (
+                                <div key={index} className="rounded-lg border p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="font-medium">
+                                      {cls.course}: {cls.name}
+                                    </div>
+                                    <Badge variant="outline">{cls.time}</Badge>
                                   </div>
-                                  <Badge variant="outline">{cls.time}</Badge>
+                                  <div className="mt-2 text-sm text-muted-foreground">
+                                    <div>Room: {cls.room}</div>
+                                    <div>Instructor: {cls.instructor}</div>
+                                  </div>
                                 </div>
-                                <div className="mt-2 text-sm text-muted-foreground">
-                                  <div>Room: {cls.room}</div>
-                                  <div>Instructor: {cls.instructor}</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">No classes scheduled</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">No classes scheduled</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -350,24 +362,34 @@ export default function SchedulePage() {
                   <CardDescription>Important dates and events</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {events.map((event) => (
-                      <div key={event.id} className="rounded-lg border p-3">
-                        <div className="font-medium">{event.title}</div>
-                        <div className="mt-1 text-sm">
-                          <div className="flex items-center text-muted-foreground">
-                            <Calendar className="mr-1 h-4 w-4" />
-                            {event.date}
+                  {eventsLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="text-center">Loading events...</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {eventsData.length > 0 ? (
+                        eventsData.map((event, index) => (
+                          <div key={index} className="rounded-lg border p-3">
+                            <div className="font-medium">{event.title}</div>
+                            <div className="mt-1 text-sm">
+                              <div className="flex items-center text-muted-foreground">
+                                <Calendar className="mr-1 h-4 w-4" />
+                                {event.date}
+                              </div>
+                              <div className="mt-1 flex items-center text-muted-foreground">
+                                <Clock className="mr-1 h-4 w-4" />
+                                {event.time}
+                              </div>
+                              <div className="mt-1 text-muted-foreground">Location: {event.location}</div>
+                            </div>
                           </div>
-                          <div className="mt-1 flex items-center text-muted-foreground">
-                            <Clock className="mr-1 h-4 w-4" />
-                            {event.time}
-                          </div>
-                          <div className="mt-1 text-muted-foreground">Location: {event.location}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-muted-foreground">No upcoming events</div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -378,7 +400,7 @@ export default function SchedulePage() {
   )
 }
 
-// Add the missing Clock component
+// Clock component
 function Clock(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -398,4 +420,3 @@ function Clock(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-

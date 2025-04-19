@@ -46,7 +46,7 @@ export default function LoginPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // For demo purposes, let's use a simple check
-      if (formData.email === "student@example.com" && formData.password === "password") {
+      if (formData.email === "sj3114@srmist.edu.in" && formData.password === "12345") {
         // Store user info in localStorage (in a real app, use secure methods)
         localStorage.setItem(
           "user",
