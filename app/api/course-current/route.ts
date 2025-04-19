@@ -18,6 +18,8 @@ export async function GET(request:NextRequest){
                 credits: true,
                 grade: true,
                 attendance_percentage: true,
+                instructor:true,
+                description:true
             }
         });
         return NextResponse.json(current_course);
