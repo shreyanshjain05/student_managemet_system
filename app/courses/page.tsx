@@ -13,7 +13,7 @@ import { BookOpen, Calendar, GraduationCap, Home, LogOut, Settings, User, FileTe
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
-// Add this interface at the top of the file, before the component
+// Add interfaces for the API responses
 interface User {
   id: string
   name: string
@@ -22,96 +22,54 @@ interface User {
   department?: string
 }
 
-// Mock data
-const courses = [
-  {
-    id: "CS101",
-    name: "Introduction to Computer Science",
-    credits: 3,
-    grade: "A",
-    attendance: 92,
+interface CurrentCourse {
+  course_code: string
+  course_name: string
+  credits: number
+  grade: string
+  attendance_percentage: number
+  instructor?: string // This might need to be added to your API
+  description?: string // This might need to be added to your API
+  materials?: { name: string, type: string }[] // This might need to be added to your API
+}
+
+interface PastCourse {
+  course_code: string
+  course_name: string
+  credits: number
+  grade: string
+  semester: string
+}
+
+// Mock data for course details that might not be in the API
+const courseDetails = {
+  "CS101": {
     instructor: "Dr. Alan Turing",
-    description:
-      "An introduction to the fundamental concepts of computer science including algorithms, data structures, and problem-solving techniques.",
+    description: "An introduction to the fundamental concepts of computer science including algorithms, data structures, and problem-solving techniques.",
     materials: [
       { name: "Lecture Notes Week 1-5", type: "PDF" },
       { name: "Programming Assignment Guidelines", type: "DOC" },
       { name: "Textbook: Introduction to Algorithms", type: "Book" },
     ],
   },
-  {
-    id: "MATH201",
-    name: "Advanced Calculus",
-    credits: 4,
-    grade: "B+",
-    attendance: 88,
+  "MATH201": {
     instructor: "Dr. Katherine Johnson",
-    description:
-      "A comprehensive study of differential and integral calculus, including applications in physics and engineering.",
+    description: "A comprehensive study of differential and integral calculus, including applications in physics and engineering.",
     materials: [
       { name: "Calculus Formula Sheet", type: "PDF" },
       { name: "Problem Sets 1-3", type: "PDF" },
       { name: "Textbook: Advanced Calculus", type: "Book" },
     ],
   },
-  {
-    id: "ENG102",
-    name: "English Composition",
-    credits: 3,
-    grade: "A-",
-    attendance: 95,
-    instructor: "Prof. Jane Austen",
-    description:
-      "Development of writing skills with emphasis on grammar, organization, and the crafting of academic arguments.",
-    materials: [
-      { name: "Essay Writing Guidelines", type: "PDF" },
-      { name: "Grammar Reference", type: "PDF" },
-      { name: "Textbook: Elements of Style", type: "Book" },
-    ],
-  },
-  {
-    id: "PHYS101",
-    name: "Physics I",
-    credits: 4,
-    grade: "B",
-    attendance: 85,
-    instructor: "Dr. Richard Feynman",
-    description:
-      "Introduction to classical mechanics, including Newton's laws, conservation of energy, and rotational motion.",
-    materials: [
-      { name: "Lab Manual", type: "PDF" },
-      { name: "Lecture Slides", type: "PPT" },
-      { name: "Textbook: Fundamentals of Physics", type: "Book" },
-    ],
-  },
-  {
-    id: "HIST105",
-    name: "World History",
-    credits: 3,
-    grade: "A",
-    attendance: 90,
-    instructor: "Prof. Howard Zinn",
-    description: "Survey of major historical events and developments from ancient civilizations to the modern era.",
-    materials: [
-      { name: "Timeline of Major Events", type: "PDF" },
-      { name: "Primary Source Documents", type: "PDF" },
-      { name: "Textbook: A People's History", type: "Book" },
-    ],
-  },
-]
-
-const pastCourses = [
-  { id: "CS100", name: "Computer Literacy", credits: 2, grade: "A", semester: "Fall 2022" },
-  { id: "MATH101", name: "College Algebra", credits: 3, grade: "A-", semester: "Fall 2022" },
-  { id: "ENG101", name: "Basic Composition", credits: 3, grade: "B+", semester: "Fall 2022" },
-  { id: "BIO101", name: "Introduction to Biology", credits: 4, grade: "B", semester: "Spring 2023" },
-  { id: "PSY101", name: "Introduction to Psychology", credits: 3, grade: "A", semester: "Spring 2023" },
-]
+  // Add more course details as needed
+}
 
 export default function CoursesPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentCourses, setCurrentCourses] = useState<CurrentCourse[]>([])
+  const [pastCourses, setPastCourses] = useState<PastCourse[]>([])
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -123,19 +81,64 @@ export default function CoursesPage() {
       return
     }
 
-    setUser(JSON.parse(userData))
-    setLoading(false)
+    const parsedUser = JSON.parse(userData)
+    setUser(parsedUser)
+
+    // Fetch current courses
+    fetchCurrentCourses(parsedUser.id)
+    
+    // Fetch past courses
+    fetchPastCourses(parsedUser.id)
   }, [router])
+
+  const fetchCurrentCourses = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/course-current?studentId=${studentId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch current courses')
+      }
+      const data = await response.json()
+      
+      // Merge API data with additional details from our mock data
+      const enhancedData = data.map((course: CurrentCourse) => {
+        const details = courseDetails[course.course_code as keyof typeof courseDetails] || {
+          instructor: "Unknown",
+          description: "No description available",
+          materials: [],
+        }
+        return { ...course, ...details }
+      })
+      
+      setCurrentCourses(enhancedData)
+      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching current courses:", error)
+      setLoading(false)
+    }
+  }
+
+  const fetchPastCourses = async (studentId: string) => {
+    try {
+      const response = await fetch(`/api/course-past?studentId=${studentId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch past courses')
+      }
+      const data = await response.json()
+      setPastCourses(data)
+    } catch (error) {
+      console.error("Error fetching past courses:", error)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("user")
     router.push("/login")
   }
 
-  const filteredCourses = courses.filter(
+  const filteredCourses = currentCourses.filter(
     (course) =>
-      course.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.course_name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   if (loading) {
@@ -272,17 +275,17 @@ export default function CoursesPage() {
                     Back to All Courses
                   </Button>
 
-                  {courses
-                    .filter((course) => course.id === selectedCourse)
+                  {currentCourses
+                    .filter((course) => course.course_code === selectedCourse)
                     .map((course) => (
-                      <div key={course.id} className="space-y-6">
+                      <div key={course.course_code} className="space-y-6">
                         <Card>
                           <CardHeader>
                             <div className="flex items-center justify-between">
                               <div>
-                                <CardTitle>{course.name}</CardTitle>
+                                <CardTitle>{course.course_name}</CardTitle>
                                 <CardDescription>
-                                  {course.id} • {course.credits} Credits
+                                  {course.course_code} • {course.credits} Credits
                                 </CardDescription>
                               </div>
                               <Badge>{course.grade}</Badge>
@@ -300,8 +303,8 @@ export default function CoursesPage() {
                             <div>
                               <h3 className="font-semibold">Attendance</h3>
                               <div className="mt-2 flex items-center gap-2">
-                                <Progress value={course.attendance} className="h-2 w-full" />
-                                <span className="text-sm font-medium">{course.attendance}%</span>
+                                <Progress value={course.attendance_percentage} className="h-2 w-full" />
+                                <span className="text-sm font-medium">{course.attendance_percentage}%</span>
                               </div>
                             </div>
                           </CardContent>
@@ -312,14 +315,18 @@ export default function CoursesPage() {
                             <CardTitle>Course Materials</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <ul className="space-y-2">
-                              {course.materials.map((material, index) => (
-                                <li key={index} className="flex items-center justify-between rounded-md border p-3">
-                                  <span>{material.name}</span>
-                                  <Badge variant="outline">{material.type}</Badge>
-                                </li>
-                              ))}
-                            </ul>
+                            {course.materials && course.materials.length > 0 ? (
+                              <ul className="space-y-2">
+                                {course.materials.map((material, index) => (
+                                  <li key={index} className="flex items-center justify-between rounded-md border p-3">
+                                    <span>{material.name}</span>
+                                    <Badge variant="outline">{material.type}</Badge>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p>No materials available for this course.</p>
+                            )}
                           </CardContent>
                         </Card>
                       </div>
@@ -327,37 +334,43 @@ export default function CoursesPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredCourses.map((course) => (
-                    <Card
-                      key={course.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => setSelectedCourse(course.id)}
-                    >
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle>{course.id}</CardTitle>
-                          <Badge>{course.grade}</Badge>
-                        </div>
-                        <CardDescription>{course.name}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Credits</span>
-                            <span className="font-medium">{course.credits}</span>
+                  {filteredCourses.length > 0 ? (
+                    filteredCourses.map((course) => (
+                      <Card
+                        key={course.course_code}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSelectedCourse(course.course_code)}
+                      >
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle>{course.course_code}</CardTitle>
+                            <Badge>{course.grade}</Badge>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Attendance</span>
-                            <span className="font-medium">{course.attendance}%</span>
+                          <CardDescription>{course.course_name}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Credits</span>
+                              <span className="font-medium">{course.credits}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Attendance</span>
+                              <span className="font-medium">{course.attendance_percentage}%</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Instructor</span>
+                              <span className="font-medium">{course.instructor || "Unknown"}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Instructor</span>
-                            <span className="font-medium">{course.instructor}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center py-8">
+                      <p>No courses found matching your search criteria.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -369,28 +382,32 @@ export default function CoursesPage() {
                   <CardDescription>Courses you have completed in previous semesters</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course Code</TableHead>
-                        <TableHead>Course Name</TableHead>
-                        <TableHead>Credits</TableHead>
-                        <TableHead>Grade</TableHead>
-                        <TableHead>Semester</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pastCourses.map((course) => (
-                        <TableRow key={course.id}>
-                          <TableCell className="font-medium">{course.id}</TableCell>
-                          <TableCell>{course.name}</TableCell>
-                          <TableCell>{course.credits}</TableCell>
-                          <TableCell>{course.grade}</TableCell>
-                          <TableCell>{course.semester}</TableCell>
+                  {pastCourses.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Course Code</TableHead>
+                          <TableHead>Course Name</TableHead>
+                          <TableHead>Credits</TableHead>
+                          <TableHead>Grade</TableHead>
+                          <TableHead>Semester</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {pastCourses.map((course) => (
+                          <TableRow key={course.course_code}>
+                            <TableCell className="font-medium">{course.course_code}</TableCell>
+                            <TableCell>{course.course_name}</TableCell>
+                            <TableCell>{course.credits}</TableCell>
+                            <TableCell>{course.grade}</TableCell>
+                            <TableCell>{course.semester}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-center py-4">No past courses found.</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -400,4 +417,3 @@ export default function CoursesPage() {
     </div>
   )
 }
-
