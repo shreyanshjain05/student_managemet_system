@@ -96,7 +96,7 @@ model Assignment {
   description    String
   created_at     DateTime @default(now())
   due_date       DateTime
-  status         String   // e.g., 'ongoing', 'completed'
+  status         String   
   progress       Int
   submitted_date DateTime?
   grade          String?
